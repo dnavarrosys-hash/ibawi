@@ -5,10 +5,10 @@ document.addEventListener('DOMContentLoaded', () => { // <-- Abre el listener DO
     
     // Inicializar AOS (Animate On Scroll)
     AOS.init({
-        duration: 1000, // Duración de la animación en ms
-        easing: 'ease-in-out', // Tipo de "aceleración"
-        once: true, // Si la animación debe ocurrir solo una vez
-        mirror: false // Si debe animarse al salir de la vista
+        duration: 1000, 
+        easing: 'ease-in-out', 
+        once: true, 
+        mirror: false 
     });
 
     // Inicializar PureCounter (para estadísticas)
@@ -16,88 +16,79 @@ document.addEventListener('DOMContentLoaded', () => { // <-- Abre el listener DO
 
     // --- CÓDIGO PARA INICIALIZAR ISOTOPE Y GLIGHTBOX EN MODAL EDUCACIÓN ---
     const educationModal = document.getElementById('modalEducacion');
-    let isotopeInstance = null; // Variable para guardar la instancia de Isotope
-    let lightboxInstance = null; // Variable para guardar la instancia de GLightbox
+    let isotopeInstance = null; 
+    let lightboxInstance = null; 
 
     if (educationModal) {
         educationModal.addEventListener('shown.bs.modal', event => {
-            // Inicializar Isotope DENTRO del modal una vez que es visible
             const isoContainer = educationModal.querySelector('.isotope-container');
-            if (isoContainer && !isotopeInstance) { // Solo inicializar una vez
-                 isotopeInstance = new Isotope(isoContainer, {
-                    itemSelector: '.isotope-item',
-                    layoutMode: 'fitRows' // Usamos fitRows
-                });
-
-                // Añadir lógica para los filtros DENTRO del modal
-                const filters = educationModal.querySelectorAll('.isotope-filters li');
-                filters.forEach(filter => {
-                    // Evita duplicar listeners si el modal se reabre rápido
-                    if (!filter.dataset.isotopeListenerAttached) { 
-                        filter.addEventListener('click', function() {
-                            filters.forEach(el => el.classList.remove('filter-active'));
-                            this.classList.add('filter-active');
-                            if(isotopeInstance) {
-                                isotopeInstance.arrange({
-                                    filter: this.getAttribute('data-filter')
-                                });
-                                // Refrescar layout después de filtrar
-                                setTimeout(() => { 
-                                    if(isotopeInstance) isotopeInstance.layout(); 
-                                }, 50); 
-                            }
-                        });
-                        filter.dataset.isotopeListenerAttached = 'true';
-                    }
-                });
-            } else if (isoContainer && isotopeInstance) {
-                 // Si ya existe, solo refrescar layout
-                 isotopeInstance.layout();
+            
+            if (isotopeInstance) {
+                try { isotopeInstance.destroy(); } catch (e) { console.error("Error destroying Isotope:", e); }
+                isotopeInstance = null;
             }
 
-            // Inicializar o recargar GLightbox DENTRO del modal
+            if (isoContainer) {
+                 setTimeout(() => {
+                    try {
+                        isotopeInstance = new Isotope(isoContainer, {
+                            itemSelector: '.isotope-item',
+                            layoutMode: 'fitRows', 
+                            percentPosition: true 
+                        });
+                        isotopeInstance.layout(); 
+
+                        const filters = educationModal.querySelectorAll('.isotope-filters li');
+                        filters.forEach(filter => {
+                            if (!filter.dataset.isotopeListenerAttached) { 
+                                filter.addEventListener('click', function() {
+                                    filters.forEach(el => el.classList.remove('filter-active'));
+                                    this.classList.add('filter-active');
+                                    if(isotopeInstance) {
+                                        isotopeInstance.arrange({ filter: this.getAttribute('data-filter') });
+                                        setTimeout(() => { if(isotopeInstance) isotopeInstance.layout(); }, 50); 
+                                    }
+                                });
+                                filter.dataset.isotopeListenerAttached = 'true';
+                            }
+                        });
+                    } catch (e) { console.error("Error initializing Isotope:", e); }
+                }, 150); 
+            }
+
             if (!lightboxInstance) { 
-                try {
-                    lightboxInstance = GLightbox({ selector: '.glightbox' });
-                } catch (e) { console.error("Error initializing GLightbox:", e); }
+                try { lightboxInstance = GLightbox({ selector: '.glightbox' }); } catch (e) { console.error("Error initializing GLightbox:", e); }
             } else {
-                 try {
-                     lightboxInstance.reload(); 
-                 } catch(e) { console.error("Error reloading GLightbox:", e); }
+                 try { lightboxInstance.reload(); } catch(e) { console.error("Error reloading GLightbox:", e); }
             }
         });
 
-        // Al ocultar, reseteamos listeners de filtros
         educationModal.addEventListener('hidden.bs.modal', event => {
              const filters = educationModal.querySelectorAll('.isotope-filters li');
-             filters.forEach(filter => {
-                 delete filter.dataset.isotopeListenerAttached; 
-             });
-             // Considera destruir instancias si hay problemas persistentes
+             filters.forEach(filter => { delete filter.dataset.isotopeListenerAttached; });
              // if (isotopeInstance) { isotopeInstance.destroy(); isotopeInstance = null; }
              // if (lightboxInstance) { lightboxInstance.destroy(); lightboxInstance = null; }
          });
     }
     // --- FIN CÓDIGO MODAL EDUCACIÓN ---
 
-    // === CÓDIGO AÑADIDO: Cierre automático del Navbar móvil ===
+    // === CÓDIGO CORREGIDO: Cierre automático del Navbar móvil ===
     const navLinks = document.querySelectorAll('#navbarNav .nav-link, #navbarNav .dropdown-item');
-    const menuToggle = document.getElementById('navbarNav');
-    // Verifica si el elemento existe antes de crear la instancia Collapse
-    if (menuToggle) {
-        const bsCollapse = new bootstrap.Collapse(menuToggle, {
-          toggle: false // Evita que se abra/cierre al inicializar
-        });
-    
+    const menuToggle = document.getElementById('navbarNav'); 
+    // Buscamos el BOTÓN que abre/cierra el menú
+    const togglerButton = document.querySelector('.navbar-toggler'); 
+
+    if (menuToggle && togglerButton) { // Aseguramos que ambos existan
         navLinks.forEach((link) => {
             link.addEventListener('click', () => {
-                // Solo cierra si el menú está visible (pantalla pequeña) y expandido
+                // Solo cierra si el menú está desplegado (clase 'show')
                 if (menuToggle.classList.contains('show')) {
-                    bsCollapse.hide();
+                    // Simulamos un clic en el botón toggler para cerrar
+                    togglerButton.click(); 
                 }
             });
         });
     }
-    // === FIN CÓDIGO AÑADIDO ===
+    // === FIN CÓDIGO CORREGIDO ===
 
 }); // <-- Cierra el listener DOMContentLoaded
